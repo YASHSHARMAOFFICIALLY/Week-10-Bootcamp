@@ -4,6 +4,10 @@
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["src/lib/*.ts"]
+    },
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
@@ -39,6 +43,7 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "generated", "prisma.config.ts"]

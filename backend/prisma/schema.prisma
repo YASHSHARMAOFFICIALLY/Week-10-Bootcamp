@@ -12,14 +12,140 @@ datasource db {
   provider = "postgresql"
 }
 
-model user {
-  id Int @id @default(autoincrement())
-  userId String @unique @default(uuid())
-  name String
-  username String @unique
-  password String
-  email String @unique
+enum Status {
+  fresh
+  expiringsoon
+  expired
+  used
+  wasted
+}
+
+enum category {
+  produce
+  dairy
+  meat
+  pantry
+  frozen
+  other
+}
+
+model Users {
+  id              Int               @id @default(autoincrement())
+  userId          String            @unique @default(uuid())
+  name            String
+  username        String            @unique
+  password        String
+  email           String            @unique
+  item            Item[]
+  householdmember HouseholdMember[]
+  owner           Household[]
+  session         Session[]
+  notification    NotificationLog[]
+  wastelog        WasteLog[]
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) 
+  updatedAt DateTime @updatedAt
+}
+
+model Household {
+  id Int @id @default(autoincrement())
+
+  createdById Int    @unique
+  invitecode  String @unique
+  name        String
+  item        Item[]
+
+  member    HouseholdMember[]
+  createdBy Users             @relation(fields: [createdById], references: [id])
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  wasteLogs        WasteLog[]
+  notificationLogs NotificationLog[]
+}
+
+enum Role {
+  member
+  admin
+}
+
+model HouseholdMember {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique
+  householdId Int
+  role        Role      @default(member)
+  joinedAt    DateTime  @default(now())
+  user        Users     @relation(fields: [userId], references: [id])
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  wasteScore  Int
+
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, householdId])
+}
+
+model Item {
+  id          Int       @id @default(autoincrement())
+  householdId Int
+  addedbyId   Int
+  household   Household @relation(fields: [householdId], references: [id])
+
+  addedby    Users    @relation(fields: [addedbyId], references: [id], onDelete: Cascade)
+  name       String
+  category   category
+  quantity   Int
+  expiryDate DateTime
+  status     Status
+  barcode    String?
+  CreatedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  wasteLogs WasteLog[]
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  device    String?
+  expiresAt DateTime
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum WasteAction {
+  used
+  wasted
+}
+
+model WasteLog {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  itemId      Int
+  householdId Int
+  action      WasteAction
+  loggedAt    DateTime    @default(now())
+  user        Users       @relation(fields: [userId], references: [id])
+  item        Item        @relation(fields: [itemId], references: [id])
+  household   Household   @relation(fields: [householdId], references: [id])
+
+  @@index([userId])
+  @@index([householdId])
+  @@index([itemId])
+}
+
+model NotificationLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  householdId Int
+  sentAt      DateTime  @default(now())
+  itemCount   Int
+  user        Users     @relation(fields: [userId], references: [id])
+  household   Household @relation(fields: [householdId], references: [id])
+
+  @@index([userId])
+  @@index([householdId])
+  @@index([userId, sentAt]) // cron checks: was email sent today?
 }
